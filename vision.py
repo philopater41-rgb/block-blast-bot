@@ -8,27 +8,38 @@ BOARD_Y = 0
 BOARD_SIZE = 0
 CELL_SIZE = 0
 
-def capture_screen():
-    """Captures the screen from the connected Android device."""
+def capture_screen(use_adb=True):
+    """
+    Captures the screen.
+    If use_adb=True, uses ADB (for PC bot).
+    If use_adb=False, tries local 'screencap' command (for Android APK).
+    """
     try:
-        # Capture screen using ADB
-        process = subprocess.Popen(
-            ['adb', 'exec-out', 'screencap', '-p'],
-            stdout=subprocess.PIPE
-        )
-        screenshot_data, _ = process.communicate()
-        
-        if not screenshot_data:
-            print("Error: No data received from ADB.")
-            return None
+        if use_adb:
+            # Capture screen using ADB (PC Mode)
+            process = subprocess.Popen(
+                ['adb', 'exec-out', 'screencap', '-p'],
+                stdout=subprocess.PIPE
+            )
+            screenshot_data, _ = process.communicate()
+            
+            if not screenshot_data:
+                print("Error: No data received from ADB.")
+                return None
+            
+            # Convert to numpy array
+            image_array = np.frombuffer(screenshot_data, np.uint8)
+            img = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+            
+        else:
+            # Native Android Mode (APK)
+            # Try capturing to a temp file then reading it
+            temp_path = '/sdcard/Download/bot_capture.png'
+            subprocess.run(['screencap', '-p', temp_path])
+            img = cv2.imread(temp_path)
+            
+        return img
 
-        # Convert to numpy array
-        image_array = np.frombuffer(screenshot_data, np.uint8)
-        
-        # Decode image
-        image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
-        
-        return image
     except Exception as e:
         print(f"Error capturing screen: {e}")
         return None
